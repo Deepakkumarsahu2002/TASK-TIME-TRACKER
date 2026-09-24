@@ -174,6 +174,26 @@ export const startTaskTimer = async (req: Request, res: Response): Promise<void>
       return;
     }
 
+    const now = new Date();
+    const otherActiveLogs = await TimeLog.find({
+      userId,
+      taskId: { $ne: task._id },
+      endedAt: null,
+    });
+
+    for (const log of otherActiveLogs) {
+      log.endedAt = now;
+      log.durationMs = Math.max(0, now.getTime() - log.startedAt.getTime());
+      await log.save();
+    }
+
+    if (otherActiveLogs.length > 0) {
+      await Task.updateMany(
+        { userId, _id: { $in: otherActiveLogs.map((log) => log.taskId) }, status: "In Progress" },
+        { $set: { status: "Pending" } }
+      );
+    }
+
     task.status = "In Progress";
     await task.save();
 
@@ -232,6 +252,9 @@ export const stopTaskTimer = async (req: Request, res: Response): Promise<void> 
     activeLog.endedAt = endedAt;
     activeLog.durationMs = durationMs;
     await activeLog.save();
+
+    task.status = "Pending";
+    await task.save();
 
     res.status(200).json({
       success: true,
