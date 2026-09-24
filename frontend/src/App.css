@@ -107,6 +107,15 @@ textarea::placeholder {
   font-size: 0.95rem;
 }
 
+.action-error {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 .dashboard-shell {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
@@ -339,6 +348,27 @@ textarea::placeholder {
   flex-wrap: wrap;
 }
 
+.time-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.time-log-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.time-log-list strong {
+  color: #0f172a;
+}
+
 .empty-state,
 .loading-state {
   display: grid;
@@ -357,5 +387,19 @@ textarea::placeholder {
 
   .sidebar {
     padding-bottom: 14px;
+  }
+
+  .task-form-header,
+  .task-form-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .task-form-actions {
+    justify-content: stretch;
+  }
+
+  .task-form-actions button {
+    flex: 1;
   }
 }

@@ -20,6 +20,13 @@ type Task = {
   updatedAt?: string
 }
 
+type TimeLog = {
+  _id: string
+  startedAt: string
+  endedAt?: string | null
+  durationMs: number
+}
+
 type Summary = {
   tasksWorkedOn: number
   totalTrackedMs: number
@@ -28,7 +35,7 @@ type Summary = {
   inProgressTasks: number
 }
 
-const API_URL = 'http://localhost:5000'
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
 
 async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
@@ -66,6 +73,7 @@ function formatDuration(ms: number): string {
 function App() {
   const [mode, setMode] = useState<AuthMode>('login')
   const [authError, setAuthError] = useState('')
+  const [actionError, setActionError] = useState('')
   const [user, setUser] = useState<User | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [summary, setSummary] = useState<Summary>({
@@ -78,7 +86,9 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [bootstrapping, setBootstrapping] = useState(true)
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
-  const [timerStartedAt, setTimerStartedAt] = useState<number | null>(null)
+  const [activeElapsedMs, setActiveElapsedMs] = useState(0)
+  const [expandedLogsTaskId, setExpandedLogsTaskId] = useState<string | null>(null)
+  const [taskLogs, setTaskLogs] = useState<Record<string, TimeLog[]>>({})
   const [authForm, setAuthForm] = useState({
     name: '',
     email: '',
@@ -128,10 +138,10 @@ function App() {
     const runningTask = data.tasks.find((task) => task.status === 'In Progress')
     if (runningTask) {
       setActiveTaskId(runningTask._id)
-      setTimerStartedAt(Date.now())
+      setActiveElapsedMs(runningTask.totalTrackedMs)
     } else {
       setActiveTaskId(null)
-      setTimerStartedAt(null)
+      setActiveElapsedMs(0)
     }
   }
 
@@ -154,7 +164,12 @@ function App() {
   useEffect(() => {
     const bootstrap = async () => {
       try {
-        await fetchCurrentUser()
+        const data = await apiRequest<{ success: boolean; user: User }>('/api/auth/me')
+        setUser(data.user)
+        await loadTasks()
+        await loadSummary()
+      } catch {
+        setUser(null)
       } finally {
         setBootstrapping(false)
       }
@@ -164,16 +179,16 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!activeTaskId || !timerStartedAt) {
+    if (!activeTaskId) {
       return undefined
     }
 
     const interval = window.setInterval(() => {
-      setTimerStartedAt(Date.now())
+      setActiveElapsedMs((current) => current + 1000)
     }, 1000)
 
     return () => window.clearInterval(interval)
-  }, [activeTaskId, timerStartedAt])
+  }, [activeTaskId])
 
   const handleAuthSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -231,6 +246,7 @@ function App() {
   const handleTaskSubmit = async (event: FormEvent) => {
     event.preventDefault()
     if (!taskForm.title.trim()) return
+    setActionError('')
 
     try {
       if (editingTaskId) {
@@ -258,7 +274,7 @@ function App() {
       await loadTasks()
       await loadSummary()
     } catch (error) {
-      console.error(error)
+      setActionError(error instanceof Error ? error.message : 'Unable to save task')
     }
   }
 
@@ -277,42 +293,73 @@ function App() {
   }
 
   const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
-    await apiRequest(`/api/tasks/${taskId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    })
-    await loadTasks()
-    await loadSummary()
+    try {
+      setActionError('')
+      await apiRequest(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      })
+      await loadTasks()
+      await loadSummary()
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Unable to update task')
+    }
   }
 
   const toggleTimer = async (task: Task) => {
-    const isRunning = task.status === 'In Progress'
+    try {
+      setActionError('')
+      const isRunning = task.status === 'In Progress'
 
-    await apiRequest(`/api/tasks/${task._id}/${isRunning ? 'stop' : 'start'}`, {
-      method: 'POST',
-    })
+      await apiRequest(`/api/tasks/${task._id}/${isRunning ? 'stop' : 'start'}`, {
+        method: 'POST',
+      })
 
-    if (isRunning) {
-      setActiveTaskId(null)
-      setTimerStartedAt(null)
-    } else {
-      setActiveTaskId(task._id)
-      setTimerStartedAt(Date.now())
+      if (isRunning) {
+        setActiveTaskId(null)
+        setActiveElapsedMs(0)
+      } else {
+        setActiveTaskId(task._id)
+        setActiveElapsedMs(0)
+      }
+
+      await loadTasks()
+      await loadSummary()
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Unable to update timer')
     }
-
-    await loadTasks()
-    await loadSummary()
   }
 
   const deleteTask = async (taskId: string) => {
     if (!window.confirm('Delete this task and its logs?')) return
 
-    await apiRequest(`/api/tasks/${taskId}`, { method: 'DELETE' })
-    await loadTasks()
-    await loadSummary()
+    try {
+      setActionError('')
+      await apiRequest(`/api/tasks/${taskId}`, { method: 'DELETE' })
+      setTaskLogs((current) => {
+        const next = { ...current }
+        delete next[taskId]
+        return next
+      })
+      await loadTasks()
+      await loadSummary()
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Unable to delete task')
+    }
   }
 
-  const currentElapsed = activeTaskId && timerStartedAt ? Date.now() - timerStartedAt : 0
+  const loadTaskLogs = async (taskId: string) => {
+    try {
+      setActionError('')
+      const data = await apiRequest<{ success: boolean; logs: TimeLog[] }>(`/api/tasks/${taskId}/logs`)
+      setTaskLogs((current) => ({ ...current, [taskId]: data.logs }))
+      setExpandedLogsTaskId(taskId)
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Unable to load time logs')
+    }
+  }
+
+  const currentElapsed = activeTaskId ? activeElapsedMs : 0
 
   if (bootstrapping) {
     return <div className="loading-state">Loading TTT dashboard...</div>
@@ -449,6 +496,7 @@ function App() {
       </aside>
 
       <main className="main-panel">
+        {actionError && <p className="action-error">{actionError}</p>}
         <section className="task-creator">
           <h3>{editingTaskId ? 'Edit task' : 'Create task'}</h3>
           <form onSubmit={handleTaskSubmit} className="task-form">
@@ -543,7 +591,7 @@ function App() {
 
                   <div className="task-meta">
                     <span>Tracked: {timerDisplay}</span>
-                    <span>{new Date(task.updatedAt ?? Date.now()).toLocaleDateString()}</span>
+                    <span>{task.updatedAt ? new Date(task.updatedAt).toLocaleDateString() : 'Not updated'}</span>
                   </div>
 
                   <div className="task-actions">
@@ -552,6 +600,17 @@ function App() {
                     </button>
                     <button type="button" className="ghost-button" onClick={() => startTaskEdit(task)}>
                       Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={() =>
+                        expandedLogsTaskId === task._id
+                          ? setExpandedLogsTaskId(null)
+                          : void loadTaskLogs(task._id)
+                      }
+                    >
+                      {expandedLogsTaskId === task._id ? 'Hide logs' : 'View logs'}
                     </button>
                     <select
                       value={task.status}
@@ -567,6 +626,21 @@ function App() {
                       Delete
                     </button>
                   </div>
+
+                  {expandedLogsTaskId === task._id && (
+                    <div className="time-log-list">
+                      {(taskLogs[task._id] ?? []).length === 0 ? (
+                        <span>No tracked sessions yet.</span>
+                      ) : (
+                        (taskLogs[task._id] ?? []).map((log) => (
+                          <div key={log._id}>
+                            <span>{new Date(log.startedAt).toLocaleString()}</span>
+                            <strong>{formatDuration(log.durationMs)}</strong>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </article>
               )
             })}
