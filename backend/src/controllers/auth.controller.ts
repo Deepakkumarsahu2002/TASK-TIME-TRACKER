@@ -46,6 +46,15 @@ export const register = async (
       passwordHash,
     });
 
+    const token = generateToken(user._id.toString());
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     // Send safe response
     res.status(201).json({
       success: true,
