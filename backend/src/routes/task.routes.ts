@@ -3,6 +3,7 @@ import {
   createTask,
   deleteTask,
   getDailySummary,
+  getTaskTimeLogs,
   getTasks,
   startTaskTimer,
   stopTaskTimer,
@@ -17,6 +18,7 @@ router.use(protect);
 router.get("/", getTasks);
 router.get("/summary/daily", getDailySummary);
 router.post("/", createTask);
+router.get("/:id/logs", getTaskTimeLogs);
 router.patch("/:id", updateTask);
 router.delete("/:id", deleteTask);
 router.post("/:id/start", startTaskTimer);

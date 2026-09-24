@@ -147,6 +147,34 @@ export const deleteTask = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+export const getTaskTimeLogs = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = getUserId(req);
+    const task = await Task.findOne({ _id: req.params.id, userId }).select("_id").lean();
+
+    if (!task) {
+      res.status(404).json({
+        success: false,
+        message: "Task not found",
+      });
+      return;
+    }
+
+    const logs = await TimeLog.find({ userId, taskId: task._id }).sort({ startedAt: -1 }).lean();
+
+    res.status(200).json({
+      success: true,
+      logs,
+    });
+  } catch (error) {
+    console.error("Get task time logs error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Something went wrong while loading time logs",
+    });
+  }
+};
+
 export const startTaskTimer = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = getUserId(req);
