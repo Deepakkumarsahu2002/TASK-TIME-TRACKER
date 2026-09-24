@@ -409,6 +409,21 @@ function App() {
           <small>{user.email}</small>
         </div>
 
+        <div className="summary-strip">
+          <div>
+            <span>Today</span>
+            <strong>{summary.tasksWorkedOn}</strong>
+          </div>
+          <div>
+            <span>Tracked</span>
+            <strong>{formatDuration(summary.totalTrackedMs)}</strong>
+          </div>
+          <div>
+            <span>Done</span>
+            <strong>{summary.completedTasks}</strong>
+          </div>
+        </div>
+
         <div className="summary-grid">
           <div>
             <span>Tasks today</span>
