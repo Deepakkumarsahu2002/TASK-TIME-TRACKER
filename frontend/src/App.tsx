@@ -89,6 +89,38 @@ function App() {
     description: '',
     status: 'Pending' as TaskStatus,
   })
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+
+  const makeTaskSuggestion = (rawTitle: string) => {
+    const cleaned = rawTitle.trim()
+    if (!cleaned) {
+      return { title: '', description: '' }
+    }
+
+    const normalized = cleaned
+      .replace(/\s+/g, ' ')
+      .replace(/^\s+|\s+$/g, '')
+
+    const title = normalized
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+
+    const lower = normalized.toLowerCase()
+    const descriptionMap: Record<string, string> = {
+      follow: 'Follow up with the relevant person and confirm next steps.',
+      meeting: 'Prepare an agenda and share updates after the discussion.',
+      email: 'Draft the message and send it to the required contact.',
+      review: 'Check the latest details and provide feedback before moving forward.',
+      design: 'Review the current design and confirm the required adjustments.',
+      bug: 'Investigate the issue, verify the root cause, and track the fix.',
+      call: 'Reach out to the relevant stakeholder and confirm the next action.',
+    }
+
+    const description = descriptionMap[lower.split(' ')[0]] ?? `Work on "${title}" and document the outcome.`
+
+    return { title, description }
+  }
 
   const loadTasks = async () => {
     const data = await apiRequest<{ success: boolean; tasks: Task[] }>('/api/tasks')
@@ -201,14 +233,26 @@ function App() {
     if (!taskForm.title.trim()) return
 
     try {
-      await apiRequest('/api/tasks', {
-        method: 'POST',
-        body: JSON.stringify({
-          title: taskForm.title,
-          description: taskForm.description,
-          status: taskForm.status,
-        }),
-      })
+      if (editingTaskId) {
+        await apiRequest(`/api/tasks/${editingTaskId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            title: taskForm.title,
+            description: taskForm.description,
+            status: taskForm.status,
+          }),
+        })
+        setEditingTaskId(null)
+      } else {
+        await apiRequest('/api/tasks', {
+          method: 'POST',
+          body: JSON.stringify({
+            title: taskForm.title,
+            description: taskForm.description,
+            status: taskForm.status,
+          }),
+        })
+      }
 
       setTaskForm({ title: '', description: '', status: 'Pending' })
       await loadTasks()
@@ -216,6 +260,20 @@ function App() {
     } catch (error) {
       console.error(error)
     }
+  }
+
+  const startTaskEdit = (task: Task) => {
+    setEditingTaskId(task._id)
+    setTaskForm({
+      title: task.title,
+      description: task.description,
+      status: task.status,
+    })
+  }
+
+  const cancelTaskEdit = () => {
+    setEditingTaskId(null)
+    setTaskForm({ title: '', description: '', status: 'Pending' })
   }
 
   const updateTaskStatus = async (taskId: string, status: TaskStatus) => {
@@ -377,16 +435,33 @@ function App() {
 
       <main className="main-panel">
         <section className="task-creator">
-          <h3>Create task</h3>
+          <h3>{editingTaskId ? 'Edit task' : 'Create task'}</h3>
           <form onSubmit={handleTaskSubmit} className="task-form">
-            <input
-              value={taskForm.title}
-              onChange={(event) =>
-                setTaskForm((current) => ({ ...current, title: event.target.value }))
-              }
-              placeholder="follow up with designer"
-              required
-            />
+            <div className="task-form-header">
+              <input
+                value={taskForm.title}
+                onChange={(event) =>
+                  setTaskForm((current) => ({ ...current, title: event.target.value }))
+                }
+                placeholder="follow up with designer"
+                required
+              />
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => {
+                  const suggested = makeTaskSuggestion(taskForm.title)
+                  setTaskForm((current) => ({
+                    ...current,
+                    title: suggested.title || current.title,
+                    description: suggested.description || current.description,
+                  }))
+                }}
+              >
+                AI suggest
+              </button>
+            </div>
+
             <textarea
               value={taskForm.description}
               onChange={(event) =>
@@ -410,9 +485,16 @@ function App() {
                 <option value="Completed">Completed</option>
               </select>
 
-              <button type="submit" className="primary-button">
-                Add task
-              </button>
+              <div className="task-form-actions">
+                {editingTaskId && (
+                  <button type="button" className="secondary-button" onClick={cancelTaskEdit}>
+                    Cancel
+                  </button>
+                )}
+                <button type="submit" className="primary-button">
+                  {editingTaskId ? 'Save changes' : 'Add task'}
+                </button>
+              </div>
             </div>
           </form>
         </section>
@@ -452,6 +534,9 @@ function App() {
                   <div className="task-actions">
                     <button type="button" className="secondary-button" onClick={() => toggleTimer(task)}>
                       {isRunning ? 'Stop timer' : 'Start timer'}
+                    </button>
+                    <button type="button" className="ghost-button" onClick={() => startTaskEdit(task)}>
+                      Edit
                     </button>
                     <select
                       value={task.status}

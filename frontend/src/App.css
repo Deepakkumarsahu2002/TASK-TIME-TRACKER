@@ -179,6 +179,34 @@ textarea::placeholder {
   gap: 20px;
 }
 
+.summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.summary-strip > div {
+  background: linear-gradient(135deg, #eff6ff, #e0f2fe);
+  border: 1px solid #bfdbfe;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.summary-strip span {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1d4ed8;
+  margin-bottom: 8px;
+}
+
+.summary-strip strong {
+  font-size: 1.5rem;
+  color: #0f172a;
+}
+
 .task-creator,
 .task-list-panel {
   background: white;
@@ -197,6 +225,22 @@ textarea::placeholder {
   gap: 12px;
 }
 
+.task-form-row,
+.task-form-header,
+.task-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.task-form-header {
+  align-items: stretch;
+}
+
+.task-form-header input {
+  flex: 1;
+}
+
 .task-form-row {
   align-items: center;
 }
@@ -210,9 +254,17 @@ textarea::placeholder {
 
 .primary-button,
 .secondary-button,
-.danger-button {
+.danger-button,
+.ghost-button {
   padding: 11px 16px;
   font-weight: 700;
+}
+
+.ghost-button {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
 }
 
 .secondary-button {
