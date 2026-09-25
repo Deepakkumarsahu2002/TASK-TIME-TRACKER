@@ -8,7 +8,7 @@ TTT is a full-stack productivity app for creating tasks, tracking work sessions,
 - Protected API routes and user-owned task data
 - Task creation, editing, status changes, and deletion
 - Single active timer per user with persisted time logs
-- Per-task time-log history
+- Per-task and all-session time-log history
 - Daily productivity summary
 - Responsive React dashboard with task suggestions and error states
 
@@ -91,6 +91,7 @@ All task endpoints require the authentication cookie.
 | POST | `/api/tasks` | Create a task |
 | PATCH | `/api/tasks/:id` | Update a task |
 | DELETE | `/api/tasks/:id` | Delete a task and its logs |
+| GET | `/api/tasks/logs` | List every time log for the current user |
 | GET | `/api/tasks/:id/logs` | List a task's time logs |
 | POST | `/api/tasks/:id/start` | Start tracking time |
 | POST | `/api/tasks/:id/stop` | Stop tracking time |
