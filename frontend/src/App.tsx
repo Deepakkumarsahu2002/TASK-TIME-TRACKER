@@ -121,26 +121,31 @@ function App() {
       .join(' ')
 
     const lower = normalized.toLowerCase()
-    if (lower === 'follow up with designer') {
-      return {
-        title: 'Follow up with UI Designer',
-        description: 'Send a Slack message to confirm wireframe delivery status.',
-      }
+    const subject = normalized.replace(/^(follow up|email|call|review|fix|research|prepare|plan|update)(?:\s+(?:with|on|for|about|to))?\s+/i, '').trim()
+    const readableSubject = subject || 'the relevant task'
+    let suggestedTitle = title
+    let description = `Define the desired outcome for "${title}", complete the next actionable step, and record any follow-up.\n\nOutcome: A clear result is documented and ready for the next person.`
+
+    if (lower.includes('follow up with designer')) {
+      suggestedTitle = 'Follow up with UI Designer'
+      description = 'Send a Slack message to confirm the current wireframe delivery status, ask about blockers, and agree on the next review date.\n\nOutcome: The delivery date and next action are confirmed.'
+    } else if (lower.startsWith('follow up')) {
+      description = `Contact ${readableSubject}, reference the previous conversation, and confirm the next concrete action.\n\nOutcome: Ownership and next steps are recorded.`
+    } else if (lower.startsWith('meeting') || lower.startsWith('plan a meeting')) {
+      description = `Prepare an agenda for ${readableSubject}, collect the necessary updates, and send a concise follow-up after the discussion.\n\nOutcome: Decisions, owners, and deadlines are documented.`
+    } else if (lower.startsWith('email') || lower.startsWith('send')) {
+      description = `Draft a concise message about ${readableSubject}, check the key details, and send it to the right recipient.\n\nOutcome: The recipient has the context needed to respond or act.`
+    } else if (lower.startsWith('review')) {
+      description = `Review ${readableSubject} against the current requirements, note any gaps, and share focused feedback.\n\nOutcome: The work is approved or has a clear revision list.`
+    } else if (lower.startsWith('bug') || lower.startsWith('fix')) {
+      description = `Reproduce ${readableSubject}, identify the root cause, apply the smallest reliable fix, and verify the result.\n\nOutcome: The issue is resolved with a repeatable verification step.`
+    } else if (lower.startsWith('research')) {
+      description = `Investigate ${readableSubject}, compare the most relevant options, and capture the evidence behind the recommendation.\n\nOutcome: A concise recommendation is ready for a decision.`
+    } else if (lower.startsWith('prepare') || lower.startsWith('plan')) {
+      description = `Break ${readableSubject} into the key steps, gather what is needed, and set a realistic completion checkpoint.\n\nOutcome: The work has a clear plan and first action.`
     }
 
-    const descriptionMap: Record<string, string> = {
-      follow: 'Follow up with the relevant person and confirm next steps.',
-      meeting: 'Prepare an agenda and share updates after the discussion.',
-      email: 'Draft the message and send it to the required contact.',
-      review: 'Check the latest details and provide feedback before moving forward.',
-      design: 'Review the current design and confirm the required adjustments.',
-      bug: 'Investigate the issue, verify the root cause, and track the fix.',
-      call: 'Reach out to the relevant stakeholder and confirm the next action.',
-    }
-
-    const description = descriptionMap[lower.split(' ')[0]] ?? `Work on "${title}" and document the outcome.`
-
-    return { title, description }
+    return { title: suggestedTitle, description }
   }
 
   const loadTasks = async () => {
