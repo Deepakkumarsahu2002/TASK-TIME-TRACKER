@@ -23,14 +23,22 @@ export const getTasks = async (req: Request, res: Response): Promise<void> => {
     const logs = await TimeLog.find({ userId, taskId: { $in: taskIds } }).sort({ startedAt: 1 }).lean();
 
     const totalByTask = new Map<string, number>();
+    const activeByTask = new Set<string>();
+    const now = Date.now();
     for (const log of logs) {
-      totalByTask.set(String(log.taskId), (totalByTask.get(String(log.taskId)) ?? 0) + (log.durationMs ?? 0));
+      const taskId = String(log.taskId);
+      const activeDuration = log.endedAt ? 0 : Math.max(0, now - log.startedAt.getTime());
+      totalByTask.set(taskId, (totalByTask.get(taskId) ?? 0) + (log.durationMs ?? 0) + activeDuration);
+      if (!log.endedAt) {
+        activeByTask.add(taskId);
+      }
     }
 
     const transformedTasks = tasks.map((task) => ({
       ...task,
       _id: task._id.toString(),
       totalTrackedMs: totalByTask.get(task._id.toString()) ?? 0,
+      isTimerRunning: activeByTask.has(task._id.toString()),
     }));
 
     res.status(200).json({
@@ -175,6 +183,24 @@ export const getTaskTimeLogs = async (req: Request, res: Response): Promise<void
   }
 };
 
+export const getUserTimeLogs = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = getUserId(req);
+    const logs = await TimeLog.find({ userId }).sort({ startedAt: -1 }).lean();
+
+    res.status(200).json({
+      success: true,
+      logs,
+    });
+  } catch (error) {
+    console.error("Get user time logs error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Something went wrong while loading time logs",
+    });
+  }
+};
+
 export const startTaskTimer = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = getUserId(req);
@@ -312,7 +338,11 @@ export const getDailySummary = async (req: Request, res: Response): Promise<void
       startedAt: { $gte: startOfDay, $lte: endOfDay },
     }).sort({ startedAt: 1 }).lean();
 
-    const totalTrackedMs = logs.reduce((sum, log) => sum + (log.durationMs ?? 0), 0);
+    const now = Date.now();
+    const totalTrackedMs = logs.reduce(
+      (sum, log) => sum + (log.durationMs ?? 0) + (log.endedAt ? 0 : Math.max(0, now - log.startedAt.getTime())),
+      0
+    );
     const taskIds = [...new Set(logs.map((log) => log.taskId.toString()))];
     const tasks = await Task.find({ userId, _id: { $in: taskIds } }).lean();
 
