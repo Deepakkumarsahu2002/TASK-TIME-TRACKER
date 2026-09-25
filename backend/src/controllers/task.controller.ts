@@ -14,6 +14,16 @@ const getUserId = (req: Request): string => {
   return user.id;
 };
 
+const closeActiveTimer = async (userId: string, taskId: string, endedAt: Date): Promise<void> => {
+  const activeLogs = await TimeLog.find({ userId, taskId, endedAt: null });
+
+  for (const log of activeLogs) {
+    log.endedAt = endedAt;
+    log.durationMs = Math.max(0, endedAt.getTime() - log.startedAt.getTime());
+    await log.save();
+  }
+};
+
 export const getTasks = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = getUserId(req);
@@ -108,6 +118,10 @@ export const updateTask = async (req: Request, res: Response): Promise<void> => 
         message: "Task not found",
       });
       return;
+    }
+
+    if (parsed.data.status === "Completed") {
+      await closeActiveTimer(userId, task._id.toString(), new Date());
     }
 
     Object.assign(task, parsed.data);
@@ -214,6 +228,22 @@ export const startTaskTimer = async (req: Request, res: Response): Promise<void>
       return;
     }
 
+    if (task.status === "Completed") {
+      res.status(409).json({
+        success: false,
+        message: "Completed tasks cannot be started again",
+      });
+      return;
+    }
+
+    if (task.status !== "Pending") {
+      res.status(409).json({
+        success: false,
+        message: "Only pending tasks can be started",
+      });
+      return;
+    }
+
     const activeLog = await TimeLog.findOne({
       userId,
       taskId: task._id,
@@ -236,9 +266,7 @@ export const startTaskTimer = async (req: Request, res: Response): Promise<void>
     });
 
     for (const log of otherActiveLogs) {
-      log.endedAt = now;
-      log.durationMs = Math.max(0, now.getTime() - log.startedAt.getTime());
-      await log.save();
+      await closeActiveTimer(userId, log.taskId.toString(), now);
     }
 
     if (otherActiveLogs.length > 0) {

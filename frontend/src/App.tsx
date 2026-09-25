@@ -631,9 +631,19 @@ function App() {
                   </div>
 
                   <div className="task-actions">
-                    <button type="button" className="secondary-button" onClick={() => toggleTimer(task)}>
-                      {isRunning ? 'Stop timer' : 'Start timer'}
-                    </button>
+                    {isRunning ? (
+                      <button type="button" className="secondary-button" onClick={() => toggleTimer(task)}>
+                        Stop timer
+                      </button>
+                    ) : task.status === 'Pending' ? (
+                      <button type="button" className="secondary-button" onClick={() => toggleTimer(task)}>
+                        Start timer
+                      </button>
+                    ) : (
+                      <span className="task-state-label">
+                        {task.status === 'Completed' ? 'Completed' : 'Timer paused'}
+                      </span>
+                    )}
                     <button type="button" className="ghost-button" onClick={() => startTaskEdit(task)}>
                       Edit
                     </button>
