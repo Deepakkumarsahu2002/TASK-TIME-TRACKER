@@ -119,11 +119,19 @@ npm run lint
 
 The repository includes `render.yaml` for a Render deployment containing one Node API service and one static frontend service.
 
+Current backend deployment:
+
+```text
+https://task-time-tracker-o6jt.onrender.com
+```
+
+Health check: `https://task-time-tracker-o6jt.onrender.com/api/health`
+
 For Render:
 
 1. Push this repository to GitHub and create a new Blueprint from the repository.
-2. Set the generated API URL as the frontend `VITE_API_URL` value.
-3. Set the deployed frontend URL as the API `CORS_ORIGIN` value.
+2. Set `VITE_API_URL=https://task-time-tracker-o6jt.onrender.com` for the frontend service.
+3. After Render gives the frontend its URL, set that URL as the API `CORS_ORIGIN` value and redeploy the API.
 4. Set `MONGODB_URI` to a MongoDB Atlas connection string.
 5. Keep `NODE_ENV=production` so the authentication cookie uses `Secure` and `SameSite=None` for the separate frontend and API origins.
 6. Verify `https://<api-host>/api/health` before testing registration and login from the frontend.
