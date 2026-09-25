@@ -192,6 +192,17 @@ npm start
 
 The public demo is available at `https://task-time-tracker-1-g7sv.onrender.com`.
 
+## Reviewer Demo Access
+
+Use these verified credentials to review the deployed application:
+
+```text
+Email:    test@example.com
+Password: Test@1234
+```
+
+This account is intended for demonstration only. Do not use it for personal or production data.
+
 ## Troubleshooting
 
 ### Frontend shows authentication errors
