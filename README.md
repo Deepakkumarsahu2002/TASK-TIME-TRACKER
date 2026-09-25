@@ -127,11 +127,17 @@ https://task-time-tracker-o6jt.onrender.com
 
 Health check: `https://task-time-tracker-o6jt.onrender.com/api/health`
 
+Current frontend deployment:
+
+```text
+https://task-time-tracker-1-g7sv.onrender.com
+```
+
 For Render:
 
 1. Push this repository to GitHub and create a new Blueprint from the repository.
 2. Set `VITE_API_URL=https://task-time-tracker-o6jt.onrender.com` for the frontend service.
-3. After Render gives the frontend its URL, set that URL as the API `CORS_ORIGIN` value and redeploy the API.
+3. Set `CORS_ORIGIN=https://task-time-tracker-1-g7sv.onrender.com` in the API service and redeploy the API.
 4. Set `MONGODB_URI` to a MongoDB Atlas connection string.
 5. Keep `NODE_ENV=production` so the authentication cookie uses `Secure` and `SameSite=None` for the separate frontend and API origins.
 6. Verify `https://<api-host>/api/health` before testing registration and login from the frontend.
@@ -145,4 +151,4 @@ npm run build
 npm start
 ```
 
-There is no public demo URL in this repository yet.
+The public demo is available at `https://task-time-tracker-1-g7sv.onrender.com` after the API CORS setting is updated.
