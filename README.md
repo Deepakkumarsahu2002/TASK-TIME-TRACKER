@@ -12,6 +12,27 @@ TTT is a full-stack productivity app for creating tasks, tracking work sessions,
 - Daily productivity summary
 - Responsive React dashboard with task suggestions and error states
 
+### Task and timer rules
+
+- A new or paused task can be started only while its status is `Pending`.
+- A running task shows `Stop timer` and stores a time-log session when stopped.
+- Marking a running task as `Completed` closes its active session automatically.
+- Completed tasks cannot be started again.
+- Only one timer can run for a user at a time; starting another task closes the previous session.
+
+### Task suggestions
+
+The `AI suggest` action is a local, deterministic assistant that works without an API key. It recognizes common intents such as follow-ups, meetings, messages, reviews, bugs, research, and planning, then generates a clearer title and an action-focused description with an expected outcome.
+
+Example:
+
+```text
+Input:       follow up with designer
+Title:       Follow up with UI Designer
+Description: Send a Slack message to confirm the current wireframe delivery status,
+			 ask about blockers, and agree on the next review date.
+```
+
 ## Stack
 
 - Frontend: React, TypeScript, Vite
@@ -115,6 +136,24 @@ npm run build
 npm run lint
 ```
 
+Run the production backend locally:
+
+```powershell
+cd backend
+npm run build
+npm start
+```
+
+The frontend production output is written to `frontend/dist`.
+
+## Security Notes
+
+- Never commit `.env` files, database credentials, or production JWT secrets.
+- Use a separate long random `JWT_SECRET` in production.
+- Rotate any credential that has been shared in chat, screenshots, logs, or source control.
+- Set `CORS_ORIGIN` to the exact deployed frontend origin; do not use `*` with credentialed cookies.
+- Production authentication requires HTTPS because the session cookie is `Secure` and cross-origin cookies use `SameSite=None`.
+
 ## Deployment
 
 The repository includes `render.yaml` for a Render deployment containing one Node API service and one static frontend service.
@@ -151,4 +190,22 @@ npm run build
 npm start
 ```
 
-The public demo is available at `https://task-time-tracker-1-g7sv.onrender.com` after the API CORS setting is updated.
+The public demo is available at `https://task-time-tracker-1-g7sv.onrender.com`.
+
+## Troubleshooting
+
+### Frontend shows authentication errors
+
+Confirm that `VITE_API_URL` points to the deployed API and that the API's `CORS_ORIGIN` exactly matches the frontend URL. Redeploy both services after changing build-time frontend variables.
+
+### Backend does not start
+
+Confirm that `MONGODB_URI` and `JWT_SECRET` are set in the API service. Check the API health endpoint and the Render service logs. The backend waits for MongoDB before it begins listening.
+
+### Local development uses stale frontend configuration
+
+Vite reads `VITE_API_URL` when the dev server starts. Stop and restart `npm run dev` after changing `frontend/.env`.
+
+## Project Status
+
+The core application is implemented and deployed. The current production services are the Render URLs listed above. Automated unit tests are not included yet; verification currently uses TypeScript checks, frontend build/lint, API smoke tests, and browser workflow checks.
