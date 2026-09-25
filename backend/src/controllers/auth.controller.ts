@@ -6,6 +6,13 @@ import { loginSchema } from "../validators/login.validator.js";
 import { generateToken } from "../utils/jwt.js";
 import { AuthenticatedRequest } from "../middleware/auth.middleware.js";
 
+const authCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? ("none" as const) : ("lax" as const),
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
+
 export const register = async (
   req: Request,
   res: Response
@@ -48,12 +55,7 @@ export const register = async (
 
     const token = generateToken(user._id.toString());
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie("token", token, authCookieOptions);
 
     // Send safe response
     res.status(201).json({
@@ -122,12 +124,7 @@ export const login = async (
     // Login successful
     const token = generateToken(user._id.toString());
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie("token", token, authCookieOptions);
 
     res.status(200).json({
       success: true,
@@ -149,11 +146,7 @@ export const login = async (
 };
 
 export const logout = (_req: Request, res: Response): void => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-  });
+  res.clearCookie("token", authCookieOptions);
 
   res.status(200).json({
     success: true,

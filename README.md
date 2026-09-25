@@ -43,6 +43,7 @@ Set these values in `backend/.env`:
 PORT=5000
 MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>/<database>
 JWT_SECRET=replace_with_a_long_random_secret
+CORS_ORIGIN=http://localhost:5173
 ```
 
 Start the API:
@@ -116,6 +117,24 @@ npm run lint
 
 ## Deployment
 
-Deploy the frontend to Vercel or Netlify, the backend to Render, Railway, or Azure App Service, and use MongoDB Atlas for production persistence. Set `MONGODB_URI`, `JWT_SECRET`, `PORT`, and the frontend `VITE_API_URL` in the hosting providers' environment settings. Configure the backend CORS origin to the deployed frontend URL before production deployment.
+The repository includes `render.yaml` for a Render deployment containing one Node API service and one static frontend service.
+
+For Render:
+
+1. Push this repository to GitHub and create a new Blueprint from the repository.
+2. Set the generated API URL as the frontend `VITE_API_URL` value.
+3. Set the deployed frontend URL as the API `CORS_ORIGIN` value.
+4. Set `MONGODB_URI` to a MongoDB Atlas connection string.
+5. Keep `NODE_ENV=production` so the authentication cookie uses `Secure` and `SameSite=None` for the separate frontend and API origins.
+6. Verify `https://<api-host>/api/health` before testing registration and login from the frontend.
+
+The frontend can also be deployed to Vercel or Netlify with `npm run build` and `dist` as the publish directory. The backend production commands are:
+
+```powershell
+cd backend
+npm ci
+npm run build
+npm start
+```
 
 There is no public demo URL in this repository yet.
