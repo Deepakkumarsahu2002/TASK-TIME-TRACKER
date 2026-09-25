@@ -372,6 +372,17 @@ button:disabled {
   font-size: 0.82rem;
 }
 
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.compact-button {
+  padding: 8px 11px;
+  font-size: 0.78rem;
+}
+
 .task-form-header,
 .task-form-actions {
   display: flex;
@@ -491,6 +502,12 @@ button:disabled {
   color: var(--ink);
 }
 
+.all-logs-panel {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
 .empty-state,
 .loading-state {
   display: grid;
@@ -563,6 +580,12 @@ button:disabled {
   .task-meta {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .panel-header-actions {
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .status-badge {

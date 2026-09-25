@@ -17,11 +17,13 @@ type Task = {
   description: string
   status: TaskStatus
   totalTrackedMs: number
+  isTimerRunning: boolean
   updatedAt?: string
 }
 
 type TimeLog = {
   _id: string
+  taskId: string
   startedAt: string
   endedAt?: string | null
   durationMs: number
@@ -89,6 +91,8 @@ function App() {
   const [activeElapsedMs, setActiveElapsedMs] = useState(0)
   const [expandedLogsTaskId, setExpandedLogsTaskId] = useState<string | null>(null)
   const [taskLogs, setTaskLogs] = useState<Record<string, TimeLog[]>>({})
+  const [allLogs, setAllLogs] = useState<TimeLog[]>([])
+  const [showAllLogs, setShowAllLogs] = useState(false)
   const [authForm, setAuthForm] = useState({
     name: '',
     email: '',
@@ -117,6 +121,13 @@ function App() {
       .join(' ')
 
     const lower = normalized.toLowerCase()
+    if (lower === 'follow up with designer') {
+      return {
+        title: 'Follow up with UI Designer',
+        description: 'Send a Slack message to confirm wireframe delivery status.',
+      }
+    }
+
     const descriptionMap: Record<string, string> = {
       follow: 'Follow up with the relevant person and confirm next steps.',
       meeting: 'Prepare an agenda and share updates after the discussion.',
@@ -135,7 +146,7 @@ function App() {
   const loadTasks = async () => {
     const data = await apiRequest<{ success: boolean; tasks: Task[] }>('/api/tasks')
     setTasks(data.tasks)
-    const runningTask = data.tasks.find((task) => task.status === 'In Progress')
+    const runningTask = data.tasks.find((task) => task.isTimerRunning)
     if (runningTask) {
       setActiveTaskId(runningTask._id)
       setActiveElapsedMs(runningTask.totalTrackedMs)
@@ -309,7 +320,7 @@ function App() {
   const toggleTimer = async (task: Task) => {
     try {
       setActionError('')
-      const isRunning = task.status === 'In Progress'
+      const isRunning = task.isTimerRunning
 
       await apiRequest(`/api/tasks/${task._id}/${isRunning ? 'stop' : 'start'}`, {
         method: 'POST',
@@ -354,6 +365,17 @@ function App() {
       const data = await apiRequest<{ success: boolean; logs: TimeLog[] }>(`/api/tasks/${taskId}/logs`)
       setTaskLogs((current) => ({ ...current, [taskId]: data.logs }))
       setExpandedLogsTaskId(taskId)
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Unable to load time logs')
+    }
+  }
+
+  const loadAllLogs = async () => {
+    try {
+      setActionError('')
+      const data = await apiRequest<{ success: boolean; logs: TimeLog[] }>('/api/tasks/logs')
+      setAllLogs(data.logs)
+      setShowAllLogs(true)
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'Unable to load time logs')
     }
@@ -565,7 +587,16 @@ function App() {
         <section className="task-list-panel">
           <div className="panel-header">
             <h3>Tasks</h3>
-            <span>{tasks.length} in list</span>
+            <div className="panel-header-actions">
+              <span>{tasks.length} in list</span>
+              <button
+                type="button"
+                className="ghost-button compact-button"
+                onClick={() => (showAllLogs ? setShowAllLogs(false) : void loadAllLogs())}
+              >
+                {showAllLogs ? 'Hide all logs' : 'All logs'}
+              </button>
+            </div>
           </div>
 
           <div className="task-list">
@@ -574,7 +605,7 @@ function App() {
             )}
 
             {tasks.map((task) => {
-              const isRunning = task.status === 'In Progress' || activeTaskId === task._id
+              const isRunning = task.isTimerRunning || activeTaskId === task._id
               const timerDisplay = isRunning ? formatDuration(currentElapsed) : formatDuration(task.totalTrackedMs)
 
               return (
@@ -645,6 +676,30 @@ function App() {
               )
             })}
           </div>
+
+          {showAllLogs && (
+            <div className="all-logs-panel">
+              <div className="panel-header">
+                <h3>All sessions</h3>
+                <span>{allLogs.length} total</span>
+              </div>
+              {allLogs.length === 0 ? (
+                <div className="empty-state">No tracked sessions yet.</div>
+              ) : (
+                <div className="time-log-list">
+                  {allLogs.map((log) => (
+                    <div key={log._id}>
+                      <span>
+                        {tasks.find((task) => task._id === log.taskId)?.title ?? 'Task'}{' '}
+                        · {new Date(log.startedAt).toLocaleString()}
+                      </span>
+                      <strong>{formatDuration(log.durationMs)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </section>
       </main>
     </div>
